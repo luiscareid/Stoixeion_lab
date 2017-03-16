@@ -1,6 +1,6 @@
 %Creado por Luisca En2014. Para hacer objetivo el proceso de
 %analisis y para hacer automatica la eleccion de los estados
-%Se necesita un archivo Spikes[cellsXframes] y Coord_active [X,Y] y especificar el número de celulas para
+%Se necesita un archivo Spikes[cellsXframes] y especificar el número de celulas para
 %considerar como un pico.
 %En esta version se pueden escoger las celulas para considerar como
 %pico. 
@@ -8,7 +8,7 @@
 
 %-------------------------------------------------%
 %AXIS Primer bloque.
-pks=4; %Deberia ser el numero de celulas con correlaciones significativas para un experimento dado 
+pks=3; %Deberia ser el numero de celulas con correlaciones significativas para un experimento dado 
 [Rasterbin,Pks_Frame_Ren,Pks_Frame]=PksFrame(Spikes,pks); 
 S_index=sindex(Rasterbin);
 S_Ras=SRas(S_index,Rasterbin);
@@ -17,7 +17,7 @@ S_Ras_Ren=SRasRen(S_Ras);
 Ras_tf_idf; %rutina para normalizar el Rasterbin basada en busquedas de palabras genera tf_idf_Rasterbin
 % tf_idf_Rasterbin_N=tf_idf_Rasterbin'*tf_idf_Rasterbin; %Genera matriz simetrica. Ayuda para solo tener un corte
 S_index_ti=sindex(tf_idf_Rasterbin); %Primer momento del sindex esta relacionado con el numero de celulas de cada pico LC15en14
-scut=0.22; %este quita el ruido esta relacionado directamente con el numero de celulas
+scut=0.24; %este quita el ruido esta relacionado directamente con el numero de celulas
 %que forman parte de los picos de sincronia. 
 %x_pks=150*pks/size(Spikes,1);
 %scut=0.4755*exp(0.00747*x_pks)-0.4588*exp(-0.07993*x_pks);
@@ -28,20 +28,23 @@ scut=0.22; %este quita el ruido esta relacionado directamente con el numero de c
 %celulas
 %La funcion del scut es una exponencial de segundo orden 
 %scut(porcentaje de celulas) especificar el porcentaje de celulas del total que formaran un edo
+
 S_indexb=S_index_ti>scut; %Despues de este porcentaje de similitud las estructuras se ven mas claras. LC Dec13
 S_indexb=S_indexb*1;
-% S_indexc=sindex(S_indexb); %Segundo momento del sindex
-% scut_c=0.35;
-% S_indexc=S_indexc>(scut_c); %este define mejor las estructuras para cc
-% %es funcion del numero de picos totales, para 1000fr/350pks ~0.4 funciona
-% S_indexc=S_indexc*1;
+S_indexc=sindex(S_indexb); %Segundo momento del sindex
+scut_c=0.35;
+S_indexc=S_indexc>(scut_c); %este define mejor las estructuras para cc
+%es funcion del numero de picos totales, para 1000fr/350pks ~0.4 funciona
+S_indexc=S_indexc*1;
 S_indexc=S_indexb;
 %Esto significa que los vectores que pertenecen a un estado deben compartir al menos cierto porcentaje de elementos similares
 %Para 100 vectores significativos (arriba del corte de pks) el valor de
 %corte de (scut*1.7) 0.44 significa que al menos ~20%  del total de vectores debe ser similar. independiente de scut 
+
+
 H_index=1-Hdist(S_indexc); %Genera estructuras definidas dependiendo de el costo que se necesita para
 %convertir un elemento en otro. 
-hcut=0.25; %Hay que cambiar el 75% de los elementos para convertirlo en otro edo
+hcut=0.25; %Hay que cambiar el 70% de los elementos para convertirlo en otro edo
 % H_indexb=((H_index>hcut)*1); %LC03Feb14
 H_indexb=1-Hdist((H_index>hcut)*1); %LC03Feb14
 S_indexp=(H_indexb>hcut)*1; %Segundo momento (Similitud de Hamilton) Define mejor las estructuras y quita el ruido
@@ -102,13 +105,10 @@ sec_Pk_frames=sum(C_edos_temp');
 Hist_Edos=HistEdos(Spikes,Pks_Frame,sec_Pk_frames,pks); 
 
 % path(path,'.\PLEGADES')
-[Ciclos_nums,Ciclos_H_E]=CyFolds(sec_Pk_edos_Ren);
+[Ciclos_nums,Ciclos_H_E]=CyFolds(sec_Pk_edos_Ren(1,29:end));
 
 %Para encontrar las celulas mas significativas de cada estado LC18En14
-csi_cut=0.1; %Hacer una funcion para tomar diferentes valores y luego hacer cross-validation
-%escogiendo el numero de celulas optimo que haga mejores predicciones a
-%estimulo visual LCR 21Oct16
-%Porcentaje de corte para determinar las celulas que pesan mas 
+csi_cut=0.15; %Porcentaje de corte para determinar las celulas que pesan mas 
 %en cada estado. 0.25 me da ~15 celulas en el estado mas grande
 % Spikes_sort=Spikes;
 csi_num_temp=zeros(size(Cells_edos));
@@ -170,6 +170,9 @@ figure(3); plot((states_corr'));
 [ sequences_corr, sequences_lag ] = xcorr_sequences( Pools_coords, Spikes,200 );
 figure(5); plot((sequences_corr'));
 
+%xcorrc para calcular los intervalos de confianza 
+[xcorrel_temp up lo]=xcorrc(Spikes(41,:),Spikes(43,:),'coeff',100,0.99);
+mean(up)
 
 %Para graficar las celulas de cada estado y las celulas base
 
@@ -178,7 +181,9 @@ for n_base=1:edos
     hold on; scatter(Pools_coords(:,1,n_base),Pools_coords(:,2,n_base),'fill');hold off
 end;
 
-%Para el numero de celulas coactivas entre pools
+%orientation_pools AGORA
+%Centroid_Coords AGORA
+
 Pools_edos=zeros(size(sis_query));
 for sp_t=1:edos
     Pools_edos(:,sp_t)=sis_query(:,sp_t)*sp_t;
@@ -186,63 +191,25 @@ end
 
 [Shared_Pools]=SharedCells(Pools_edos);
 
-%Para la similitud de la poblacion tomo todos los vectores que pertenecen a
-%cada estado en el mapa de similitud correspondiente LC sept15
+%Para encontrar la media de los OSIs de cada ensamble
+%OSI es una matriz [1,numero de celulas] con el OSI de cada celula
+[Pools_OSI, Cells_OSI] = orientation_pools(sis_query,OSI,Cells_edos);
+mean_Cells_OSI=zeros(edos,1);
 
-Pk_edos_temp=Pk_edos(:,4);
-pket_xx=find(Pk_edos_temp==0);
-Pk_edos_temp(pket_xx)=[];
-S_index_ti_edos=S_index_ti(Pk_edos_temp,Pk_edos_temp);
-S_index_ti_edos=S_index_ti_edos-eye(size(S_index_ti_edos));
-mean_si_4=mean(S_index_ti_edos);
-% 
-% %Para encontrar la similitud entre edos distintos
-% Pk_edos_a=Pk_edos(:,5);
-% pket_xx=find(Pk_edos_a==0);
-% Pk_edos_a(pket_xx)=[];
-% Pk_edos_b=Pk_edos(:,5);
-% pket_xx=find(Pk_edos_b==0);
-% Pk_edos_b(pket_xx)=[];
-% S_index_ti_ab=S_index_ti(Pk_edos_b,Pk_edos_a);
-% mean_si_5_5=mean(S_index_ti_ab);
-% 
-% %Para hacer PCA de los vectores originales donde hubo estimulacion
-% stim_frames=find(stim>5);
-% Spikes_frames=Spikes(:,stim_frames);
-% PCA_frames=pca(Spikes_frames);
-% figure;
-% 
-% scatter3(PCA_frames(1:39,1),PCA_frames(1:39,2),PCA_frames(1:39,3))
-% hold on
-% scatter3(PCA_frames(40:end,1),PCA_frames(40:end,2),PCA_frames(40:end,3))
-% hold off
-% 
+for omt=1:edos
+    oxt1=find(Cells_OSI(:,omt)==0);
+    COSI=Cells_OSI(:,omt);
+    COSI(oxt1)=[];
+    mean_Cells_OSI(omt)=mean(COSI);
+end
 
-% print -depsc2 -painters Pool_01.eps %Para guardar figs como vectores
+mean_Pools_OSI=zeros(edos,1);
 
-%Para calcular correlaciones entre todas las celulas de un grupo dado LCR
-%Jun 2015
-Coord_resp=Coord_active;
-Spikes_resp=Spikes;
-Pool_temp=Coord_resp;
-    xcs_cells=size(find(Pool_temp(:,2)),1);
-    xcs_lag=200;
-    correl_temp=zeros(1,xcs_lag*2+1);
-    t_nan=0;
-
-    for xcs_ii=1:(xcs_cells-1)
-        for xcs_iii=(xcs_ii+1):xcs_cells
-            correl_i=xcorr(Spikes_resp(xcs_ii,:),Spikes_resp(xcs_iii,:),xcs_lag,'coeff'); %lag 20 frames
-            if isnan(correl_i)
-                t_nan=1+t_nan;
-            else
-            correl_temp=correl_temp+correl_i;
-            end
-        end
-    end
-    correl_resp=correl_temp/((xcs_cells^2-xcs_cells)/2);
-
-
-
+for omt2=1:edos
+    oxt2=find(Pools_OSI(:,omt2)==0);
+    POSI=Pools_OSI(:,omt2);
+    POSI(oxt2)=[];
+    mean_Pools_OSI(omt2)=mean(POSI);
+end
 
 

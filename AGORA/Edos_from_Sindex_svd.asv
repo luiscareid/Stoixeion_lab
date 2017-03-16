@@ -42,7 +42,7 @@ for efsvd=1:edos_size_cut
     svd_fac(:,:,efsvd)=(abs(V_svd_tsig(efsvd,:)'*V_svd_tsig(efsvd,:))*S_svd_sig(efsvd,efsvd));
 end;
 
-edos_svd_cut=0.6; %Corte para los factores del svd. Pensar en una manera de normalizar
+edos_svd_cut=0.4; %Corte para los factores del svd. Pensar en una manera de normalizar
 svd_fac=(svd_fac>edos_svd_cut)*1;
 % implay(svd_fac); %Para visualizar los factores como pelicula
 %para graficar las repeticiones arriba del azar 
@@ -54,7 +54,7 @@ svd_fac_mag=sort(svd_fac_mag,'descend');
 
 %Con esto determino el numero de estados figure; plot((sum(svd_fac(:,:,1))))
 
-rep_svd=5^2-1; %Encuentra los repetidos mas de n veces; n sale de plot(svd_fac_mag)LCR dic15
+rep_svd=10^2-1; %Encuentra los repetidos mas de n veces; n sale de plot(svd_fac_mag)LCR dic15
 svd_sig=svd_fac(:,:,find(sum(sum(svd_fac(:,:,:)))>rep_svd)); 
 %para grafica de factores figure; imagesc(svd_fac(:,:,10)==0)
 

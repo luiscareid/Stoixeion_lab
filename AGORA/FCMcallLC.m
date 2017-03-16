@@ -17,7 +17,7 @@ param.val=3;
 result = FCMclust(data,param);
 result = validity(result,data,param); %modvalidity para todos los parametros
 
-plot(data.X(:,1),data.X(:,2),'b.',result.cluster.v(:,1),result.cluster.v(:,2),'rX');
+plot(data.X(:,1),data.X(:,2),'b.',result.cluster.v(:,1),result.cluster.v(:,2),'ro');
 hold on
 %draw contour-map
 new.X=data.X;

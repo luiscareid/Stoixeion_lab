@@ -7,7 +7,7 @@ function [Hist_Edos]=HistEdos(Spikes,Pks_Frame,sec_Pk_Frame,pks)
 
 Hist_Edos=sum(Spikes);
 
-figure(7)
+figure(6)
 plot(Hist_Edos)
 
 H=size(Pks_Frame,2);
@@ -29,3 +29,13 @@ for hh=1:H
     Pks_Frame_plot(Pks_Frame(hh))=sec_Pk_Frame(hh);
     end
 end;
+
+%Para hacer la grafica de estados en funcion del numero de frames 
+figure(7)
+plot([0 hi],[0 max(sec_Pk_Frame)+1]);
+for hh=1:H
+    if sec_Pk_Frame(hh)>0
+text(Pks_Frame(hh),sec_Pk_Frame(hh),'|','FontSize',10)
+    end
+end;
+
